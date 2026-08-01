@@ -16,6 +16,16 @@ import * as table from '$lib/server/db/schema';
 // Only honored under `vite dev`, never in a production build.
 const bypassAuth = () => dev && ['1', 'true'].includes(env.DEV_BYPASS_AUTH ?? '');
 
+// Every response gets these regardless of auth state, so the app (and its
+// session-cookie-authenticated actions) can't be framed by another origin.
+function withSecurityHeaders(response: Response): Response {
+	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('Content-Security-Policy', "frame-ancestors 'none'");
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	return response;
+}
+
 function devUser(): App.Locals['user'] {
 	const email = 'dev@localhost';
 	db.insert(table.user).values({ email, name: 'Dev Admin' }).onConflictDoNothing().run();
@@ -26,7 +36,7 @@ function devUser(): App.Locals['user'] {
 export const handle: Handle = async ({ event, resolve }) => {
 	if (bypassAuth()) {
 		event.locals.user = devUser();
-		return resolve(event);
+		return withSecurityHeaders(await resolve(event));
 	}
 
 	const token = event.cookies.get(SESSION_COOKIE);
@@ -40,7 +50,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// The OAuth callback (and logout) must be reachable without a session;
 	// everything else is gated behind Hack Club Auth.
 	if (path === '/auth/callback' || path === '/auth/logout') {
-		return resolve(event);
+		return withSecurityHeaders(await resolve(event));
 	}
 
 	if (!event.locals.user) {
@@ -58,5 +68,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 		error(403, 'This page is for admins only.');
 	}
 
-	return resolve(event);
+	return withSecurityHeaders(await resolve(event));
 };

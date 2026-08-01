@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
@@ -72,6 +72,13 @@ export async function fetchProfile(accessToken: string): Promise<{ email: string
 
 function hashToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
+}
+
+/** Constant-time string comparison, used for the OAuth `state` check. */
+export function safeEqual(a: string, b: string): boolean {
+	const bufA = Buffer.from(a);
+	const bufB = Buffer.from(b);
+	return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
 }
 
 export function createSession(userEmail: string): { token: string; expiresAt: Date } {

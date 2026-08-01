@@ -4,7 +4,8 @@ import {
 	STATE_COOKIE,
 	createSession,
 	exchangeCode,
-	fetchProfile
+	fetchProfile,
+	safeEqual
 } from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
@@ -21,7 +22,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	const expectedState = cookies.get(STATE_COOKIE);
 	cookies.delete(STATE_COOKIE, { path: '/' });
 
-	if (!code || !state || !expectedState || state !== expectedState) {
+	if (!code || !state || !expectedState || !safeEqual(state, expectedState)) {
 		error(400, 'Invalid OAuth state. Please try logging in again.');
 	}
 
