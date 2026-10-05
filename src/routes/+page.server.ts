@@ -3,7 +3,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { accessOverrides, canAccess } from '$lib/server/access';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import { attachLines, cancelOrder } from '$lib/server/orders';
+import { attachLines, cancelOrder, hasPurchased } from '$lib/server/orders';
 import type { Actions, PageServerLoad } from './$types';
 
 function loadCart(email: string) {
@@ -22,12 +22,18 @@ function loadCart(email: string) {
 export const load: PageServerLoad = async ({ locals }) => {
 	const email = locals.user!.email;
 	const overrides = accessOverrides(email);
+	// Restricted items still show up for everyone — just greyed out and
+	// unpurchasable for anyone who isn't unlocked for them.
 	const items = db
 		.select()
 		.from(table.item)
 		.orderBy(desc(table.item.createdAt))
 		.all()
-		.filter((it) => canAccess(it, overrides));
+		.map((it) => ({
+			...it,
+			locked: !canAccess(it, overrides),
+			alreadyPurchased: it.limitOne && hasPurchased(email, it.id)
+		}));
 	const orders = attachLines(
 		db
 			.select()
@@ -61,20 +67,17 @@ export const actions: Actions = {
 			return fail(400, { message: 'That item isn’t available to you.' });
 		}
 
-		if (it.stock !== null) {
+		if (it.limitOne) {
+			if (hasPurchased(email, id)) {
+				return fail(400, { message: `You’ve already bought “${it.name}” — limit one per person.` });
+			}
 			const [existing] = db
 				.select()
 				.from(table.cartItem)
 				.where(and(eq(table.cartItem.userEmail, email), eq(table.cartItem.itemId, id)))
 				.all();
-			const wanted = (existing?.qty ?? 0) + 1;
-			if (wanted > it.stock) {
-				return fail(400, {
-					message:
-						it.stock === 0
-							? `“${it.name}” is out of stock.`
-							: `Only ${it.stock} of “${it.name}” in stock.`
-				});
+			if ((existing?.qty ?? 0) >= 1) {
+				return fail(400, { message: `“${it.name}” is limited to one per person.` });
 			}
 		}
 
@@ -107,8 +110,8 @@ export const actions: Actions = {
 			.where(where)
 			.all();
 		if (!line) return fail(400, { message: 'That item is no longer in your cart.' });
-		if (line.item.stock !== null && qty > line.item.stock) {
-			return fail(400, { message: `Only ${line.item.stock} of “${line.item.name}” in stock.` });
+		if (line.item.limitOne && qty > 1) {
+			return fail(400, { message: `“${line.item.name}” is limited to one per person.` });
 		}
 		db.update(table.cartItem).set({ qty }).where(where).run();
 	},
@@ -139,12 +142,8 @@ export const actions: Actions = {
 					if (!canAccess(l.item, overrides)) {
 						throw new CheckoutError(`“${l.item.name}” is no longer available to you.`);
 					}
-					if (l.item.stock !== null && l.qty > l.item.stock) {
-						throw new CheckoutError(
-							l.item.stock === 0
-								? `“${l.item.name}” is out of stock.`
-								: `Only ${l.item.stock} of “${l.item.name}” left in stock.`
-						);
+					if (l.item.limitOne && (l.qty > 1 || hasPurchased(email, l.item.id))) {
+						throw new CheckoutError(`“${l.item.name}” is limited to one per person.`);
 					}
 				}
 
@@ -173,12 +172,6 @@ export const actions: Actions = {
 							qty: l.qty
 						})
 						.run();
-					if (l.item.stock !== null) {
-						tx.update(table.item)
-							.set({ stock: l.item.stock - l.qty })
-							.where(eq(table.item.id, l.item.id))
-							.run();
-					}
 				}
 				tx.delete(table.cartItem).where(eq(table.cartItem.userEmail, email)).run();
 				return sum;

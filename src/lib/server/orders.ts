@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 
@@ -12,9 +12,26 @@ export function attachLines(orders: table.Order[]): OrderWithLines[] {
 	return orders.map((o) => ({ ...o, lines: lines.filter((l) => l.orderId === o.id) }));
 }
 
+/** Whether this user already has a non-cancelled order containing this item. */
+export function hasPurchased(email: string, itemId: number): boolean {
+	const [row] = db
+		.select({ id: table.orderItem.id })
+		.from(table.orderItem)
+		.innerJoin(table.order, eq(table.orderItem.orderId, table.order.id))
+		.where(
+			and(
+				eq(table.order.userEmail, email),
+				eq(table.orderItem.itemId, itemId),
+				isNull(table.order.cancelledAt)
+			)
+		)
+		.limit(1)
+		.all();
+	return !!row;
+}
+
 /**
- * Cancels a pending order: marks it cancelled, refunds the credits, and puts
- * the stock back (when an item still exists and tracks stock).
+ * Cancels a pending order: marks it cancelled and refunds the credits.
  * Admins can cancel anyone's order; users only their own.
  */
 export function cancelOrder(
@@ -45,17 +62,6 @@ export function cancelOrder(
 			.where(eq(table.user.email, o.userEmail))
 			.run();
 
-		const lines = tx.select().from(table.orderItem).where(eq(table.orderItem.orderId, orderId)).all();
-		for (const line of lines) {
-			if (line.itemId === null) continue;
-			const [it] = tx.select().from(table.item).where(eq(table.item.id, line.itemId)).all();
-			if (it && it.stock !== null) {
-				tx.update(table.item)
-					.set({ stock: it.stock + line.qty })
-					.where(eq(table.item.id, line.itemId))
-					.run();
-			}
-		}
 		return { ok: true };
 	});
 }

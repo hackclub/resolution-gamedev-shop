@@ -29,16 +29,14 @@ export const load: PageServerLoad = async () => {
 
 function parseFields(
 	form: FormData
-): { name: string; description: string; price: number; stock: number | null; restricted: boolean } | null {
+): { name: string; description: string; price: number; restricted: boolean; limitOne: boolean } | null {
 	const name = String(form.get('name') ?? '').trim();
 	const description = String(form.get('description') ?? '').trim();
 	const price = Number(form.get('price'));
 	if (!name || !Number.isInteger(price) || price < 0) return null;
-	const rawStock = String(form.get('stock') ?? '').trim();
-	const stock = rawStock === '' ? null : Number(rawStock);
-	if (stock !== null && (!Number.isInteger(stock) || stock < 0)) return null;
 	const restricted = form.get('restricted') === 'on';
-	return { name, description, price, stock, restricted };
+	const limitOne = form.get('limitOne') === 'on';
+	return { name, description, price, restricted, limitOne };
 }
 
 async function processImage(form: FormData): Promise<{ path: string } | { error: string } | null> {

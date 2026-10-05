@@ -29,16 +29,16 @@
 			<input name="price" type="number" min="0" step="1" required />
 		</label>
 		<label>
-			<span>Stock (leave empty for unlimited)</span>
-			<input name="stock" type="number" min="0" step="1" placeholder="∞" />
-		</label>
-		<label>
 			<span>Image (PNG, JPEG, WebP, or GIF — optional)</span>
 			<input name="image" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
 		</label>
-		<label class="row" style="margin-bottom: 0">
+		<label class="row" style="margin-bottom: 0.5rem">
 			<input type="checkbox" name="restricted" style="width: auto" />
-			<span style="margin: 0">Restricted — hidden from everyone except people unlocked below</span>
+			<span style="margin: 0">Restricted — greyed out and unpurchasable except for people unlocked below</span>
+		</label>
+		<label class="row" style="margin-bottom: 0">
+			<input type="checkbox" name="limitOne" style="width: auto" />
+			<span style="margin: 0">Limit one purchase per person</span>
 		</label>
 		<button style="margin-top: 1rem">Add item</button>
 	</form>
@@ -76,14 +76,10 @@
 						<input name="price" type="number" min="0" step="1" required value={item.price} />
 					</label>
 					<label>
-						<span>Stock (leave empty for unlimited)</span>
-						<input name="stock" type="number" min="0" step="1" placeholder="∞" value={item.stock} />
-					</label>
-					<label>
 						<span>Replace image (leave empty to keep the current one)</span>
 						<input name="image" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
 					</label>
-					<label class="row" style="margin-bottom: 0">
+					<label class="row" style="margin-bottom: 0.5rem">
 						<input
 							type="checkbox"
 							name="restricted"
@@ -91,8 +87,12 @@
 							style="width: auto"
 						/>
 						<span style="margin: 0">
-							Restricted — hidden from everyone except people unlocked below
+							Restricted — greyed out and unpurchasable except for people unlocked below
 						</span>
+					</label>
+					<label class="row" style="margin-bottom: 0">
+						<input type="checkbox" name="limitOne" checked={item.limitOne} style="width: auto" />
+						<span style="margin: 0">Limit one purchase per person</span>
 					</label>
 					<button style="margin-top: 1rem">Save changes</button>
 				</form>
@@ -112,8 +112,8 @@
 				<div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem">
 					<p class="muted" style="margin: 0 0 0.5rem">
 						Access overrides {item.restricted
-							? '(everyone else is blocked since this item is restricted)'
-							: '(everyone else can see this item)'}
+							? '(everyone else sees this greyed out since it’s restricted)'
+							: '(everyone else can buy this normally)'}
 					</p>
 					{#if item.access.length > 0}
 						<ul class="access-list">

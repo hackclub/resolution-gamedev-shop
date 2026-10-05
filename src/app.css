@@ -153,11 +153,6 @@ nav .session {
 	max-width: 14rem;
 }
 
-.stock {
-	font-size: 0.85rem;
-	margin: 0;
-}
-
 .filters {
 	display: flex;
 	gap: 0.5rem;
@@ -343,6 +338,14 @@ label span {
 	align-items: center;
 	justify-content: space-between;
 	margin-top: 0.5rem;
+}
+
+.card.locked {
+	opacity: 0.5;
+}
+
+.card.locked .thumb {
+	filter: grayscale(1);
 }
 
 .price {

@@ -24,10 +24,10 @@ export const item = sqliteTable('item', {
 	description: text('description').notNull().default(''),
 	price: integer('price').notNull(),
 	image: text('image'),
-	// null = unlimited stock
-	stock: integer('stock'),
 	// Hidden from everyone except the people explicitly unlocked for it in itemAccess.
 	restricted: integer('restricted', { mode: 'boolean' }).notNull().default(false),
+	// Each person may buy this at most once (across all their non-cancelled orders).
+	limitOne: integer('limit_one', { mode: 'boolean' }).notNull().default(false),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`)

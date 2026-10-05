@@ -25,7 +25,7 @@
 		{:else}
 			<div class="grid">
 				{#each data.items as item (item.id)}
-					<article class="card">
+					<article class="card" class:locked={item.locked}>
 						{#if item.image}
 							<img class="thumb" src={item.image} alt={item.name} />
 						{:else}
@@ -36,15 +36,17 @@
 							{#if item.description}
 								<p class="desc">{item.description}</p>
 							{/if}
-							{#if item.stock !== null}
-								<p class="muted stock">Stock: {item.stock}</p>
+							{#if item.locked}
+								<p class="muted">🔒 Locked for you</p>
+							{:else if item.alreadyPurchased}
+								<p class="muted">Already bought — limit one per person</p>
 							{/if}
 							<footer>
 								<span class="price">{item.price} ✦</span>
 								<form method="POST" action="?/addToCart" use:enhance>
 									<input type="hidden" name="id" value={item.id} />
-									<button disabled={item.stock === 0}>
-										{item.stock === 0 ? 'Out of stock' : 'Add to cart'}
+									<button disabled={item.locked || item.alreadyPurchased}>
+										{item.locked ? 'Locked' : item.alreadyPurchased ? 'Already bought' : 'Add to cart'}
 									</button>
 								</form>
 							</footer>
@@ -94,7 +96,13 @@
 									<form method="POST" action="?/setQty" use:enhance>
 										<input type="hidden" name="id" value={line.id} />
 										<input type="hidden" name="qty" value={line.qty + 1} />
-										<button class="ghost" aria-label="One more {line.item.name}">+</button>
+										<button
+											class="ghost"
+											aria-label="One more {line.item.name}"
+											disabled={line.item.limitOne && line.qty >= 1}
+										>
+											+
+										</button>
 									</form>
 								</div>
 							</li>

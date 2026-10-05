@@ -31,8 +31,8 @@ client.exec(`
 		description TEXT NOT NULL DEFAULT '',
 		price INTEGER NOT NULL,
 		image TEXT,
-		stock INTEGER,
 		restricted INTEGER NOT NULL DEFAULT 0,
+		limit_one INTEGER NOT NULL DEFAULT 0,
 		created_at INTEGER NOT NULL DEFAULT (unixepoch())
 	);
 	CREATE TABLE IF NOT EXISTS item_access (
@@ -70,15 +70,18 @@ client.exec(`
 	);
 `);
 
-// Upgrade databases created before these columns existed.
+// Upgrade databases created before these columns existed (and drop the
+// now-unused stock column — items no longer track inventory counts).
 for (const ddl of [
 	'ALTER TABLE item ADD COLUMN stock INTEGER',
-	'ALTER TABLE item ADD COLUMN restricted INTEGER NOT NULL DEFAULT 0'
+	'ALTER TABLE item ADD COLUMN restricted INTEGER NOT NULL DEFAULT 0',
+	'ALTER TABLE item ADD COLUMN limit_one INTEGER NOT NULL DEFAULT 0',
+	'ALTER TABLE item DROP COLUMN stock'
 ]) {
 	try {
 		client.exec(ddl);
 	} catch {
-		// column already exists
+		// column already exists/doesn't exist
 	}
 }
 
