@@ -32,7 +32,15 @@ client.exec(`
 		price INTEGER NOT NULL,
 		image TEXT,
 		stock INTEGER,
+		restricted INTEGER NOT NULL DEFAULT 0,
 		created_at INTEGER NOT NULL DEFAULT (unixepoch())
+	);
+	CREATE TABLE IF NOT EXISTS item_access (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		item_id INTEGER NOT NULL REFERENCES item(id) ON DELETE CASCADE,
+		user_email TEXT NOT NULL,
+		allowed INTEGER NOT NULL,
+		UNIQUE(item_id, user_email)
 	);
 	CREATE TABLE IF NOT EXISTS orders (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,7 +71,10 @@ client.exec(`
 `);
 
 // Upgrade databases created before these columns existed.
-for (const ddl of ['ALTER TABLE item ADD COLUMN stock INTEGER']) {
+for (const ddl of [
+	'ALTER TABLE item ADD COLUMN stock INTEGER',
+	'ALTER TABLE item ADD COLUMN restricted INTEGER NOT NULL DEFAULT 0'
+]) {
 	try {
 		client.exec(ddl);
 	} catch {

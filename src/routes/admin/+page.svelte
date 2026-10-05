@@ -36,7 +36,11 @@
 			<span>Image (PNG, JPEG, WebP, or GIF — optional)</span>
 			<input name="image" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
 		</label>
-		<button>Add item</button>
+		<label class="row" style="margin-bottom: 0">
+			<input type="checkbox" name="restricted" style="width: auto" />
+			<span style="margin: 0">Restricted — hidden from everyone except people unlocked below</span>
+		</label>
+		<button style="margin-top: 1rem">Add item</button>
 	</form>
 </section>
 
@@ -79,7 +83,18 @@
 						<span>Replace image (leave empty to keep the current one)</span>
 						<input name="image" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
 					</label>
-					<button>Save changes</button>
+					<label class="row" style="margin-bottom: 0">
+						<input
+							type="checkbox"
+							name="restricted"
+							checked={item.restricted}
+							style="width: auto"
+						/>
+						<span style="margin: 0">
+							Restricted — hidden from everyone except people unlocked below
+						</span>
+					</label>
+					<button style="margin-top: 1rem">Save changes</button>
 				</form>
 				<form
 					method="POST"
@@ -93,6 +108,45 @@
 					<input type="hidden" name="id" value={item.id} />
 					<button class="danger">Delete</button>
 				</form>
+
+				<div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem">
+					<p class="muted" style="margin: 0 0 0.5rem">
+						Access overrides {item.restricted
+							? '(everyone else is blocked since this item is restricted)'
+							: '(everyone else can see this item)'}
+					</p>
+					{#if item.access.length > 0}
+						<ul class="access-list">
+							{#each item.access as a (a.id)}
+								<li>
+									<span class="chip {a.allowed ? 'ok' : 'cancelled'}">
+										{a.allowed ? 'Unlocked' : 'Locked'}
+									</span>
+									{a.name}
+									<form method="POST" action="?/clearAccess" use:enhance class="reset">
+										<input type="hidden" name="itemId" value={item.id} />
+										<input type="hidden" name="email" value={a.userEmail} />
+										<button class="ghost">Reset</button>
+									</form>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+					<form method="POST" action="?/setAccess" use:enhance class="row">
+						<input type="hidden" name="itemId" value={item.id} />
+						<select name="email" required style="width: auto">
+							<option value="" disabled selected>Choose a person…</option>
+							{#each data.users as u (u.email)}
+								<option value={u.email}>{u.name}</option>
+							{/each}
+						</select>
+						<select name="allowed" style="width: auto">
+							<option value="1">Unlock for them</option>
+							<option value="0">Lock for them</option>
+						</select>
+						<button>Set</button>
+					</form>
+				</div>
 			</div>
 		</div>
 	</section>

@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { and, desc, eq, sql } from 'drizzle-orm';
+import { accessOverrides, canAccess } from '$lib/server/access';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import { attachLines, cancelOrder } from '$lib/server/orders';
@@ -20,7 +21,13 @@ function loadCart(email: string) {
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const email = locals.user!.email;
-	const items = db.select().from(table.item).orderBy(desc(table.item.createdAt)).all();
+	const overrides = accessOverrides(email);
+	const items = db
+		.select()
+		.from(table.item)
+		.orderBy(desc(table.item.createdAt))
+		.all()
+		.filter((it) => canAccess(it, overrides));
 	const orders = attachLines(
 		db
 			.select()
@@ -50,6 +57,9 @@ export const actions: Actions = {
 
 		const [it] = db.select().from(table.item).where(eq(table.item.id, id)).all();
 		if (!it) return fail(400, { message: 'That item no longer exists.' });
+		if (!canAccess(it, accessOverrides(email))) {
+			return fail(400, { message: 'That item isn’t available to you.' });
+		}
 
 		if (it.stock !== null) {
 			const [existing] = db
@@ -124,7 +134,11 @@ export const actions: Actions = {
 					.all();
 				if (lines.length === 0) throw new CheckoutError('Your cart is empty.');
 
+				const overrides = accessOverrides(email);
 				for (const l of lines) {
+					if (!canAccess(l.item, overrides)) {
+						throw new CheckoutError(`“${l.item.name}” is no longer available to you.`);
+					}
 					if (l.item.stock !== null && l.qty > l.item.stock) {
 						throw new CheckoutError(
 							l.item.stock === 0

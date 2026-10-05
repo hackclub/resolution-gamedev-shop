@@ -128,6 +128,26 @@ nav .session {
 	border-color: var(--text-dim);
 }
 
+.access-list {
+	list-style: none;
+	margin: 0 0 0.75rem;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+
+.access-list li {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.9rem;
+}
+
+.access-list .reset {
+	margin-left: auto;
+}
+
 .reason {
 	font-size: 0.8rem;
 	max-width: 14rem;
@@ -222,7 +242,8 @@ button.danger:hover:not(:disabled) {
 }
 
 input,
-textarea {
+textarea,
+select {
 	font: inherit;
 	width: 100%;
 	background: var(--bg);
@@ -233,7 +254,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
 	outline: 2px solid var(--accent);
 	outline-offset: -1px;
 }

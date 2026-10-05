@@ -26,10 +26,28 @@ export const item = sqliteTable('item', {
 	image: text('image'),
 	// null = unlimited stock
 	stock: integer('stock'),
+	// Hidden from everyone except the people explicitly unlocked for it in itemAccess.
+	restricted: integer('restricted', { mode: 'boolean' }).notNull().default(false),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`)
 });
+
+// Per-user overrides of an item's default visibility: `allowed: true` unlocks a
+// restricted item for just this person, `allowed: false` locks a public item away
+// from just this person. No row here means "use the item's default."
+export const itemAccess = sqliteTable(
+	'item_access',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		itemId: integer('item_id')
+			.notNull()
+			.references(() => item.id, { onDelete: 'cascade' }),
+		userEmail: text('user_email').notNull(),
+		allowed: integer('allowed', { mode: 'boolean' }).notNull()
+	},
+	(t) => [unique().on(t.itemId, t.userEmail)]
+);
 
 export const cartItem = sqliteTable(
 	'cart_item',
@@ -74,6 +92,7 @@ export const orderItem = sqliteTable('order_item', {
 
 export type CartItem = typeof cartItem.$inferSelect;
 export type Item = typeof item.$inferSelect;
+export type ItemAccess = typeof itemAccess.$inferSelect;
 export type Order = typeof order.$inferSelect;
 export type OrderItem = typeof orderItem.$inferSelect;
 export type User = typeof user.$inferSelect;
