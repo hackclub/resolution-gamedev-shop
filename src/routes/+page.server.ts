@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { accessOverrides, canAccess } from '$lib/server/access';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
@@ -27,7 +27,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const items = db
 		.select()
 		.from(table.item)
-		.orderBy(desc(table.item.createdAt))
+		.orderBy(asc(table.item.price), desc(table.item.createdAt))
 		.all()
 		.map((it) => ({
 			...it,
