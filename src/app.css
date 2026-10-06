@@ -500,6 +500,16 @@ tr:last-child td {
 	white-space: nowrap;
 }
 
+.note-form {
+	margin: 0.15rem 0;
+}
+
+.note-input {
+	font-size: 0.78rem;
+	padding: 0.2rem 0.45rem;
+	border-radius: 0.35rem;
+}
+
 .stepper {
 	display: flex;
 	align-items: center;

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { untrack } from 'svelte';
 	import ActionModal from '$lib/components/ActionModal.svelte';
 
 	let { data, form } = $props();
@@ -7,6 +8,8 @@
 	let cartOpen = $state(true);
 	let balance = $derived(data.user?.balance ?? 0);
 	let canAfford = $derived(data.cartTotal <= balance);
+	// Prefilled from the last order, but freely editable from then on.
+	let address = $state(untrack(() => data.lastAddress));
 </script>
 
 <svelte:head>
@@ -81,6 +84,17 @@
 								<div class="cart-line-info">
 									<strong>{line.item.name}</strong>
 									<span class="price">{line.item.price} ✦</span>
+									<form method="POST" action="?/setNote" use:enhance class="note-form">
+										<input type="hidden" name="id" value={line.id} />
+										<input
+											name="note"
+											class="note-input"
+											placeholder="Note (e.g. colour, size)"
+											maxlength="200"
+											value={line.note ?? ''}
+											onchange={(e) => e.currentTarget.form?.requestSubmit()}
+										/>
+									</form>
 									<form method="POST" action="?/remove" use:enhance>
 										<input type="hidden" name="id" value={line.id} />
 										<button class="link">Remove</button>
@@ -117,6 +131,16 @@
 						<p class="cart-warning">Not enough credits to complete this order.</p>
 					{/if}
 					<form method="POST" action="?/checkout" use:enhance>
+						<label>
+							<span>Shipping address</span>
+							<textarea
+								name="address"
+								rows="2"
+								maxlength="500"
+								required
+								bind:value={address}
+							></textarea>
+						</label>
 						<button disabled={!canAfford} style="width: 100%">Confirm order</button>
 					</form>
 				{/if}
@@ -141,13 +165,19 @@
 							</div>
 							<ul class="order-lines">
 								{#each o.lines as line (line.id)}
-									<li>{line.qty}× {line.itemName}</li>
+									<li>
+										{line.qty}× {line.itemName}
+										{#if line.note}<span class="muted">— {line.note}</span>{/if}
+									</li>
 								{/each}
 							</ul>
 							<div class="row" style="justify-content: space-between">
 								<span class="muted">{o.createdAt.toLocaleDateString()}</span>
 								<span class="price">{o.total} ✦</span>
 							</div>
+							{#if o.address}
+								<p class="muted" style="margin: 0">📍 {o.address}</p>
+							{/if}
 							{#if o.comments}
 								<p class="order-comments">📦 {o.comments}</p>
 							{/if}

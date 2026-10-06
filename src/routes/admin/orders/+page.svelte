@@ -47,8 +47,8 @@
 	<table>
 		<thead>
 			<tr>
-				<th>#</th><th>Who</th><th>Items</th><th>Total</th><th>When</th><th>Status</th>
-				<th>Notes</th><th></th>
+				<th>#</th><th>Who</th><th>Items</th><th>Address</th><th>Total</th><th>When</th>
+				<th>Status</th><th>Notes</th><th></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -62,10 +62,14 @@
 					<td>
 						<ul class="order-lines">
 							{#each o.lines as line (line.id)}
-								<li>{line.qty}× {line.itemName}</li>
+								<li>
+									{line.qty}× {line.itemName}
+									{#if line.note}<span class="muted">— {line.note}</span>{/if}
+								</li>
 							{/each}
 						</ul>
 					</td>
+					<td class="muted reason">{o.address || '—'}</td>
 					<td class="price">{o.total} ✦</td>
 					<td class="muted">{o.createdAt.toLocaleString()}</td>
 					<td>

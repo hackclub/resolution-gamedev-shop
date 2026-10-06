@@ -57,7 +57,9 @@ export const cartItem = sqliteTable(
 		itemId: integer('item_id')
 			.notNull()
 			.references(() => item.id, { onDelete: 'cascade' }),
-		qty: integer('qty').notNull().default(1)
+		qty: integer('qty').notNull().default(1),
+		// Buyer's free-text note for this line (colour, size, etc).
+		note: text('note')
 	},
 	(t) => [unique().on(t.userEmail, t.itemId)]
 );
@@ -67,6 +69,8 @@ export const order = sqliteTable('orders', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	userEmail: text('user_email').notNull(),
 	total: integer('total').notNull(),
+	// Shipping address entered at checkout.
+	address: text('address').notNull().default(''),
 	// Admin notes shown to the buyer (tracking URLs and such).
 	comments: text('comments'),
 	fulfilledAt: integer('fulfilled_at', { mode: 'timestamp' }),
@@ -87,7 +91,9 @@ export const orderItem = sqliteTable('order_item', {
 	itemId: integer('item_id').references(() => item.id, { onDelete: 'set null' }),
 	itemName: text('item_name').notNull(),
 	price: integer('price').notNull(),
-	qty: integer('qty').notNull().default(1)
+	qty: integer('qty').notNull().default(1),
+	// Buyer's note for this line, carried over from the cart at checkout.
+	note: text('note')
 });
 
 export type CartItem = typeof cartItem.$inferSelect;

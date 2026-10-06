@@ -46,6 +46,7 @@ client.exec(`
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_email TEXT NOT NULL,
 		total INTEGER NOT NULL,
+		address TEXT NOT NULL DEFAULT '',
 		comments TEXT,
 		fulfilled_at INTEGER,
 		cancelled_at INTEGER,
@@ -59,13 +60,15 @@ client.exec(`
 		item_id INTEGER REFERENCES item(id) ON DELETE SET NULL,
 		item_name TEXT NOT NULL,
 		price INTEGER NOT NULL,
-		qty INTEGER NOT NULL DEFAULT 1
+		qty INTEGER NOT NULL DEFAULT 1,
+		note TEXT
 	);
 	CREATE TABLE IF NOT EXISTS cart_item (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_email TEXT NOT NULL,
 		item_id INTEGER NOT NULL REFERENCES item(id) ON DELETE CASCADE,
 		qty INTEGER NOT NULL DEFAULT 1,
+		note TEXT,
 		UNIQUE(user_email, item_id)
 	);
 `);
@@ -76,7 +79,10 @@ for (const ddl of [
 	'ALTER TABLE item ADD COLUMN stock INTEGER',
 	'ALTER TABLE item ADD COLUMN restricted INTEGER NOT NULL DEFAULT 0',
 	'ALTER TABLE item ADD COLUMN limit_one INTEGER NOT NULL DEFAULT 0',
-	'ALTER TABLE item DROP COLUMN stock'
+	'ALTER TABLE item DROP COLUMN stock',
+	'ALTER TABLE cart_item ADD COLUMN note TEXT',
+	'ALTER TABLE order_item ADD COLUMN note TEXT',
+	"ALTER TABLE orders ADD COLUMN address TEXT NOT NULL DEFAULT ''"
 ]) {
 	try {
 		client.exec(ddl);

@@ -11,12 +11,25 @@ function loadCart(email: string) {
 		.select({
 			id: table.cartItem.id,
 			qty: table.cartItem.qty,
+			note: table.cartItem.note,
 			item: table.item
 		})
 		.from(table.cartItem)
 		.innerJoin(table.item, eq(table.cartItem.itemId, table.item.id))
 		.where(eq(table.cartItem.userEmail, email))
 		.all();
+}
+
+/** The address on the buyer's most recent order, to prefill the checkout form with. */
+function lastAddress(email: string): string {
+	const [row] = db
+		.select({ address: table.order.address })
+		.from(table.order)
+		.where(eq(table.order.userEmail, email))
+		.orderBy(desc(table.order.createdAt))
+		.limit(1)
+		.all();
+	return row?.address ?? '';
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -48,7 +61,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		items,
 		orders,
 		cart,
-		cartTotal: cart.reduce((sum, l) => sum + l.item.price * l.qty, 0)
+		cartTotal: cart.reduce((sum, l) => sum + l.item.price * l.qty, 0),
+		lastAddress: lastAddress(email)
 	};
 };
 
@@ -116,6 +130,18 @@ export const actions: Actions = {
 		db.update(table.cartItem).set({ qty }).where(where).run();
 	},
 
+	setNote: async ({ request, locals }) => {
+		const email = locals.user!.email;
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		if (!Number.isInteger(id)) return fail(400, { message: 'Invalid item.' });
+		const note = String(form.get('note') ?? '').trim().slice(0, 200) || null;
+		db.update(table.cartItem)
+			.set({ note })
+			.where(and(eq(table.cartItem.id, id), eq(table.cartItem.userEmail, email)))
+			.run();
+	},
+
 	remove: async ({ request, locals }) => {
 		const email = locals.user!.email;
 		const form = await request.formData();
@@ -125,12 +151,16 @@ export const actions: Actions = {
 			.run();
 	},
 
-	checkout: async ({ locals }) => {
+	checkout: async ({ request, locals }) => {
 		const email = locals.user!.email;
+		const form = await request.formData();
+		const address = String(form.get('address') ?? '').trim().slice(0, 500);
+		if (!address) return fail(400, { message: 'An address is required to place an order.' });
+
 		try {
 			const total = db.transaction((tx) => {
 				const lines = tx
-					.select({ qty: table.cartItem.qty, item: table.item })
+					.select({ qty: table.cartItem.qty, note: table.cartItem.note, item: table.item })
 					.from(table.cartItem)
 					.innerJoin(table.item, eq(table.cartItem.itemId, table.item.id))
 					.where(eq(table.cartItem.userEmail, email))
@@ -159,7 +189,7 @@ export const actions: Actions = {
 					.run();
 				const created = tx
 					.insert(table.order)
-					.values({ userEmail: email, total: sum })
+					.values({ userEmail: email, total: sum, address })
 					.returning({ id: table.order.id })
 					.get();
 				for (const l of lines) {
@@ -169,7 +199,8 @@ export const actions: Actions = {
 							itemId: l.item.id,
 							itemName: l.item.name,
 							price: l.item.price,
-							qty: l.qty
+							qty: l.qty,
+							note: l.note
 						})
 						.run();
 				}
